@@ -1,45 +1,43 @@
-const express = require("express");
-const axios = require("axios");
-const https = require("https");
-const app = express();
-const PORT = 3000;
+const http = require('http');
 
-// Middleware to parse JSON bodies (if needed)
-app.use(express.json());
+// Create the HTTP server
+const server = http.createServer((req, res) => {
+  // Handle GET request
+  if (req.method === 'GET' && req.url === '/data') {
+    const responseBody = {
+      "parameter 1": 0,
+      "parameter 2": "OFF",
+      "parameter 3": "TIMER_CHECK"
+    };
 
-// HTTPS Agent to ignore SSL certificate errors
-const httpsAgent = new https.Agent({
-  rejectUnauthorized: false, // Disable SSL validation for development
-});
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(responseBody));
+  }
 
-// Proxy route
-app.use("/api/endpoint", async (req, res) => {
-  try {
-    const response = await axios({
-      method: req.method, // Forward the HTTP method (GET/POST/etc.)
-      url: "https://2313dae3-1da5-41c4-b158-6723d0ef30f7.mock.pstmn.io/api/endpoint", // Target API
-      headers: {
-        ...req.headers, // Forward incoming headers
-        "x-api-key": process.env.POSTMAN_API_KEY, // Replace with your Postman API key
-      },
-      data: req.body, // Forward the request body (for POST/PUT requests)
-      httpsAgent, // Use the custom HTTPS agent
+  // Handle POST request
+  if (req.method === 'POST' && req.url === '/data') {
+    let body = '';
+
+    req.on('data', chunk => {
+      body += chunk;
     });
-    res.status(response.status).send(response.data); // Return the response from the target API
-  } catch (error) {
-    console.error("Error forwarding request:", error.message);
-    if (error.response) {
-      console.error("Error Response Headers:", error.response.headers);
-      console.error("Error Response Body:", error.response.data);
-    }
-    res.status(error.response?.status || 500).send({
-      error: "Error forwarding request",
-      details: error.message,
+
+    req.on('end', () => {
+      // Process the POST request and respond with a JSON message
+      const response = { "acknowledged": 1 };
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(response));
     });
+  }
+
+  // Handle other requests
+  else {
+    res.writeHead(404, { 'Content-Type': 'text/plain' });
+    res.end('Not Found');
   }
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Node.js proxy server running on http://localhost:${PORT}`);
+// Start the server on port 3000
+server.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000');
 });
